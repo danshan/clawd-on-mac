@@ -4,7 +4,7 @@ import os
 private let hookLogger = Logger(subsystem: "com.clawd.ClawdOnMac", category: "Hooks")
 
 /// Manages hook registration into AI tool settings files.
-/// Supports Claude Code, CodeBuddy, Cursor, Gemini, Kiro, and opencode.
+/// Supports Claude Code, CodeBuddy, Copilot CLI, Cursor, Gemini, Kiro, and opencode.
 class HookRegistrar {
 
     // MARK: - Constants
@@ -44,6 +44,13 @@ class HookRegistrar {
         "SessionStart", "SessionEnd", "BeforeAgent",
         "AfterAgent", "BeforeTool", "AfterTool",
         "Notification", "PreCompress"
+    ]
+
+    static let COPILOT_HOOKS = [
+        "sessionStart", "sessionEnd", "userPromptSubmitted",
+        "preToolUse", "postToolUse", "errorOccurred",
+        "agentStop", "subagentStart", "subagentStop",
+        "preCompact"
     ]
 
     static let KIRO_HOOKS = [
@@ -131,6 +138,9 @@ class HookRegistrar {
         case "codebuddy":
             removeClawdHooksFromJSON(at: "\(home)/.codebuddy/settings.json", hooksKey: "hooks", marker: "codebuddy-hook.js")
 
+        case "copilot-cli":
+            removeClawdHooksFromJSON(at: "\(home)/.copilot/hooks/hooks.json", hooksKey: "hooks", marker: "copilot-hook.js")
+
         case "cursor-agent":
             removeClawdHooksFromJSON(at: "\(home)/.cursor/hooks.json", hooksKey: "hooks", marker: "cursor-hook.js")
 
@@ -163,6 +173,7 @@ class HookRegistrar {
         switch agentId {
         case "claude-code":   registerClaudeHooks(port: port)
         case "codebuddy":     registerCodeBuddyHooks(port: port)
+        case "copilot-cli":   registerCopilotHooks()
         case "cursor-agent":  registerCursorHooks()
         case "gemini-cli":    registerGeminiHooks()
         case "kiro-cli":      registerKiroHooks()
@@ -258,8 +269,14 @@ class HookRegistrar {
             let extDir = "\(home)/.pi/agent/extensions/clawd"
             return fm.fileExists(atPath: "\(extDir)/index.ts")
 
-        case "codex", "copilot-cli":
-            // These tools don't use clawd hooks
+        case "copilot-cli":
+            let path = "\(home)/.copilot/hooks/hooks.json"
+            guard let settings = readJSON(at: path),
+                  let hooks = settings["hooks"] as? [String: Any] else { return false }
+            let json = String(data: (try? JSONSerialization.data(withJSONObject: hooks)) ?? Data(), encoding: .utf8) ?? ""
+            return json.localizedCaseInsensitiveContains("clawd") || json.contains("copilot-hook.js")
+
+        case "codex":
             return false
 
         default:
@@ -289,6 +306,9 @@ class HookRegistrar {
 
         let cu = registerCursorHooks()
         total += cu.added; skipped += cu.skipped
+
+        let co = registerCopilotHooks()
+        total += co.added; skipped += co.skipped
 
         let ge = registerGeminiHooks()
         total += ge.added; skipped += ge.skipped
@@ -381,6 +401,51 @@ class HookRegistrar {
 
             guard let command = buildHookCommand(nodeBin: nodeBin, hookScript: hookScript, event: event) else { skipped += 1; continue }
             eventHooks.append(["type": "command", "command": command])
+            hooks[event] = eventHooks
+            added += 1
+        }
+
+        if added > 0 {
+            settings["hooks"] = hooks
+            if settings["version"] == nil {
+                settings["version"] = 1
+            }
+            writeJSON(settings, to: hooksPath)
+        }
+        return (added: added, skipped: skipped)
+    }
+
+    // MARK: - Copilot CLI hooks (~/.copilot/hooks/hooks.json)
+
+    @discardableResult
+    func registerCopilotHooks() -> (added: Int, skipped: Int) {
+        let home = FileManager.default.homeDirectoryForCurrentUser.path
+        let dir = "\(home)/.copilot"
+        guard FileManager.default.fileExists(atPath: dir) else { return (0, 0) }
+
+        let hooksDir = "\(dir)/hooks"
+        try? FileManager.default.createDirectory(atPath: hooksDir, withIntermediateDirectories: true)
+
+        let hooksPath = "\(hooksDir)/hooks.json"
+        var settings = readJSON(at: hooksPath) ?? [:]
+
+        let hookScript = hookScriptPath(tool: "copilot")
+        let nodeBin = resolveNodeBin()
+
+        var hooks = settings["hooks"] as? [String: Any] ?? [:]
+
+        var added = 0
+        var skipped = 0
+
+        for event in Self.COPILOT_HOOKS {
+            var eventHooks = hooks[event] as? [[String: Any]] ?? []
+            if eventHooks.contains(where: { isClawdHook($0, marker: "copilot-hook.js") }) {
+                skipped += 1
+                continue
+            }
+
+            guard let command = buildHookCommand(nodeBin: nodeBin, hookScript: hookScript, event: event) else { skipped += 1; continue }
+            eventHooks.append(["type": "command", "bash": command, "powershell": command, "timeoutSec": 5])
             hooks[event] = eventHooks
             added += 1
         }
@@ -635,6 +700,7 @@ class HookRegistrar {
         let scriptName: String
         switch tool {
         case "codebuddy": scriptName = "codebuddy-hook.js"
+        case "copilot": scriptName = "copilot-hook.js"
         case "cursor": scriptName = "cursor-hook.js"
         case "gemini": scriptName = "gemini-hook.js"
         case "kiro": scriptName = "kiro-hook.js"
@@ -700,6 +766,7 @@ class HookRegistrar {
 
     private func isClawdHook(_ hook: [String: Any], marker: String = MARKER) -> Bool {
         if let cmd = hook["command"] as? String, cmd.contains(marker) { return true }
+        if let bash = hook["bash"] as? String, bash.contains(marker) { return true }
         if let url = hook["url"] as? String, url.contains("localhost") && url.contains("/permission") { return true }
         // Check nested hooks arrays (Claude Code format)
         if let nestedHooks = hook["hooks"] as? [[String: Any]] {
