@@ -1,0 +1,32 @@
+/* General */
+"menu.preferences" = "환경설정...";
+"menu.language" = "언어";
+"menu.miniMode" = "미니 모드";
+"menu.doNotDisturb" = "방해 금지 모드";
+"menu.quit" = "Clawd 종료";
+
+/* Settings */
+"settings.title" = "설정";
+"settings.tab.general" = "일반";
+"settings.tab.theme" = "테마";
+"settings.tab.agents" = "에이전트";
+"settings.language" = "언어";
+"settings.sound" = "소리";
+"settings.sound.enabled" = "효과음 활성화";
+"settings.launchAtLogin" = "로그인 시 실행";
+
+/* Permission Bubble */
+"permission.allow" = "허용";
+"permission.deny" = "거부";
+"permission.suggestion" = "제안";
+
+/* States */
+"state.idle" = "대기";
+"state.working" = "작업 중";
+"state.thinking" = "생각 중";
+"state.sleeping" = "잠자기";
+"state.error" = "오류";
+
+/* Mini Mode */
+"mini.enter" = "미니 모드 진입";
+"mini.exit" = "미니 모드 종료";

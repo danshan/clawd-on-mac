@@ -1,0 +1,32 @@
+/* General */
+"menu.preferences" = "偏好设置...";
+"menu.language" = "语言";
+"menu.miniMode" = "迷你模式";
+"menu.doNotDisturb" = "勿扰模式";
+"menu.quit" = "退出 Clawd";
+
+/* Settings */
+"settings.title" = "设置";
+"settings.tab.general" = "通用";
+"settings.tab.theme" = "主题";
+"settings.tab.agents" = "代理";
+"settings.language" = "语言";
+"settings.sound" = "声音";
+"settings.sound.enabled" = "启用音效";
+"settings.launchAtLogin" = "开机启动";
+
+/* Permission Bubble */
+"permission.allow" = "允许";
+"permission.deny" = "拒绝";
+"permission.suggestion" = "建议";
+
+/* States */
+"state.idle" = "待机";
+"state.working" = "工作中";
+"state.thinking" = "思考中";
+"state.sleeping" = "休眠中";
+"state.error" = "错误";
+
+/* Mini Mode */
+"mini.enter" = "进入迷你模式";
+"mini.exit" = "退出迷你模式";

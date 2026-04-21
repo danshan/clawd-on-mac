@@ -1,0 +1,32 @@
+/* General */
+"menu.preferences" = "Preferences...";
+"menu.language" = "Language";
+"menu.miniMode" = "Mini Mode";
+"menu.doNotDisturb" = "Do Not Disturb";
+"menu.quit" = "Quit Clawd";
+
+/* Settings */
+"settings.title" = "Settings";
+"settings.tab.general" = "General";
+"settings.tab.theme" = "Theme";
+"settings.tab.agents" = "Agents";
+"settings.language" = "Language";
+"settings.sound" = "Sound";
+"settings.sound.enabled" = "Enable sound effects";
+"settings.launchAtLogin" = "Launch at login";
+
+/* Permission Bubble */
+"permission.allow" = "Allow";
+"permission.deny" = "Deny";
+"permission.suggestion" = "Suggestion";
+
+/* States */
+"state.idle" = "Idle";
+"state.working" = "Working";
+"state.thinking" = "Thinking";
+"state.sleeping" = "Sleeping";
+"state.error" = "Error";
+
+/* Mini Mode */
+"mini.enter" = "Enter Mini Mode";
+"mini.exit" = "Exit Mini Mode";

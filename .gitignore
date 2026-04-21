@@ -1,0 +1,17 @@
+
+# macOS system files
+.DS_Store
+**/.DS_Store
+
+# Xcode user state
+ClawdOnMac.xcodeproj/project.xcworkspace/xcuserdata/
+ClawdOnMac.xcodeproj/xcuserdata/
+
+# Xcode build artifacts
+build/
+DerivedData/
+
+# Swift Package Manager
+.build/
+.swiftpm/
+Package.resolved
