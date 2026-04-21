@@ -1,8 +1,9 @@
 #!/usr/bin/env node
 // Clawd — Kiro CLI hook (stdin JSON with hook_event_name; exit code gating)
 // Registered in ~/.kiro/agents/clawd.json by hooks/kiro-install.js
+// preToolUse: gates tool execution via /permission bubble (blocking)
 
-const { postStateToRunningServer, readHostPrefix } = require("./server-config");
+const { postStateToRunningServer, postPermissionToRunningServer } = require("./server-config");
 const { createPidResolver, readStdinJson, getPlatformConfig } = require("./shared-process");
 
 // Kiro CLI hook event → { state, event } for the Clawd state machine
@@ -31,25 +32,64 @@ readStdinJson().then((payload) => {
   const { state, event } = mapped;
   if (hookName === "agentSpawn" && !process.env.CLAWD_REMOTE) resolve();
 
-  // Kiro CLI stdin has no session_id — use "default" (all sessions merged)
   const sessionId = "default";
   const cwd = (payload && payload.cwd) || "";
 
   const { stablePid, agentPid, detectedEditor, pidChain } = resolve();
 
-  const body = { state, session_id: sessionId, event };
-  body.agent_id = "kiro-cli";
-  if (cwd) body.cwd = cwd;
+  const stateBody = { state, session_id: sessionId, event };
+  stateBody.agent_id = "kiro-cli";
+  if (cwd) stateBody.cwd = cwd;
   if (process.env.CLAWD_REMOTE) {
-    body.host = readHostPrefix();
+    const { readHostPrefix } = require("./server-config");
+    stateBody.host = readHostPrefix();
   } else {
-    body.source_pid = stablePid;
-    if (detectedEditor) body.editor = detectedEditor;
-    if (agentPid) body.agent_pid = agentPid;
-    if (pidChain.length) body.pid_chain = pidChain;
+    stateBody.source_pid = stablePid;
+    if (detectedEditor) stateBody.editor = detectedEditor;
+    if (agentPid) stateBody.agent_pid = agentPid;
+    if (pidChain.length) stateBody.pid_chain = pidChain;
   }
 
-  postStateToRunningServer(JSON.stringify(body), { timeoutMs: 100 }, () => {
+  // preToolUse: send state update (fire-and-forget) then block on permission bubble
+  if (hookName === "preToolUse") {
+    postStateToRunningServer(JSON.stringify(stateBody), { timeoutMs: 100 }, () => {});
+
+    const toolName = (payload && payload.tool_name) || "Unknown";
+    let toolInput = {};
+    try {
+      const raw = payload.tool_args || payload.tool_input;
+      toolInput = typeof raw === "string" ? JSON.parse(raw) : (raw || {});
+    } catch {}
+
+    const permBody = {
+      tool_name: toolName,
+      tool_input: toolInput,
+      session_id: sessionId,
+      agent_id: "kiro-cli",
+    };
+
+    postPermissionToRunningServer(JSON.stringify(permBody), {}, (err, data) => {
+      if (err || !data) {
+        // Clawd unavailable — allow by default (exit 0)
+        process.exit(0);
+        return;
+      }
+
+      let behavior = "allow";
+      if (data.hookSpecificOutput && data.hookSpecificOutput.decision) {
+        behavior = data.hookSpecificOutput.decision.behavior || "allow";
+      } else if (data.behavior) {
+        behavior = data.behavior;
+      }
+
+      // Kiro uses exit code: 0 = allow, 1 = deny
+      process.exit(behavior === "deny" ? 1 : 0);
+    });
+    return;
+  }
+
+  // All other events: fire-and-forget state update
+  postStateToRunningServer(JSON.stringify(stateBody), { timeoutMs: 100 }, () => {
     process.exit(0);
   });
 });

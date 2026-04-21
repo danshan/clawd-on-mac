@@ -445,7 +445,9 @@ class HookRegistrar {
             }
 
             guard let command = buildHookCommand(nodeBin: nodeBin, hookScript: hookScript, event: event) else { skipped += 1; continue }
-            eventHooks.append(["type": "command", "bash": command, "powershell": command, "timeoutSec": 5])
+            // preToolUse needs long timeout for permission bubble interaction
+            let timeout = event == "preToolUse" ? 600 : 5
+            eventHooks.append(["type": "command", "bash": command, "powershell": command, "timeoutSec": timeout])
             hooks[event] = eventHooks
             added += 1
         }
@@ -486,7 +488,10 @@ class HookRegistrar {
             }
 
             guard let command = buildHookCommand(nodeBin: nodeBin, hookScript: hookScript, event: event) else { skipped += 1; continue }
-            eventHooks.append(["type": "command", "command": command])
+            // BeforeTool needs long timeout for permission bubble interaction
+            var entry: [String: Any] = ["type": "command", "command": command]
+            if event == "BeforeTool" { entry["timeout"] = 600 }
+            eventHooks.append(entry)
             hooks[event] = eventHooks
             added += 1
         }
@@ -532,7 +537,10 @@ class HookRegistrar {
             }
 
             guard let command = buildHookCommand(nodeBin: nodeBin, hookScript: hookScript, event: event) else { skipped += 1; continue }
-            eventHooks.append(["type": "command", "command": command])
+            // preToolUse needs long timeout for permission bubble interaction
+            var entry: [String: Any] = ["type": "command", "command": command]
+            if event == "preToolUse" { entry["timeout"] = 600 }
+            eventHooks.append(entry)
             hooks[event] = eventHooks
             added += 1
         }

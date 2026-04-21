@@ -574,13 +574,13 @@ class HTTPServer {
         let petFrame = getPetFrame?() ?? NSRect(x: 100, y: 100, width: 150, height: 100)
 
         DispatchQueue.main.async { [weak self] in
-            // Timeout permission requests after 30s to prevent connection leak
+            // Timeout permission requests after 600s to prevent connection leak
             let timeoutItem = DispatchWorkItem {
                 let timeoutBody = "{\"action\":\"deny\"}"
                 let timeoutResponse = "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: \(timeoutBody.count)\r\n\r\n\(timeoutBody)"
                 self?.sendResponse(timeoutResponse, connection: connection)
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 30, execute: timeoutItem)
+            DispatchQueue.main.asyncAfter(deadline: .now() + 600, execute: timeoutItem)
 
             self?.bubbleManager?.showPermission(entry, petFrame: petFrame) { [weak self] action in
                 timeoutItem.cancel()

@@ -161,6 +161,80 @@ function probePort(port, timeoutMs, callback, options = {}) {
   });
 }
 
+// POST to /permission and wait for the full response body.
+// callback(err, data, port) — data is parsed JSON or null on failure.
+function postPermissionToPort(port, payload, timeoutMs, callback, options = {}) {
+  const httpRequest = options.httpRequest || http.request;
+  const req = httpRequest(
+    {
+      hostname: "127.0.0.1",
+      port,
+      path: PERMISSION_PATH,
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Content-Length": Buffer.byteLength(payload),
+      },
+      timeout: timeoutMs,
+    },
+    (res) => {
+      let body = "";
+      res.setEncoding("utf8");
+      res.on("data", (chunk) => { if (body.length < 65536) body += chunk; });
+      res.on("end", () => {
+        let data = null;
+        try { data = JSON.parse(body); } catch {}
+        callback(null, data, port);
+      });
+    }
+  );
+  req.on("error", (err) => callback(err, null, port));
+  req.on("timeout", () => {
+    req.destroy();
+    callback(new Error("timeout"), null, port);
+  });
+  req.end(payload);
+}
+
+// Blocking permission request: discover Clawd port, POST to /permission,
+// wait for the user's bubble decision. Designed for command hooks that need
+// to gate tool execution (preToolUse / BeforeTool).
+// callback(err, data) — data is the parsed JSON response from Clawd's
+// /permission handler (e.g. {behavior:"allow"} or {behavior:"deny"}).
+function postPermissionToRunningServer(body, options, callback) {
+  const payload = typeof body === "string" ? body : JSON.stringify(body);
+  const permTimeoutMs = (options && options.permTimeoutMs) || 600000;
+  const discoverTimeoutMs = (options && options.discoverTimeoutMs) || 2000;
+  const { direct, fallback } = splitPortCandidates(options && options.preferredPort, options);
+  const probe = (options && options.probePort) || probePort;
+  const postPerm = (options && options.postPermissionToPort) || postPermissionToPort;
+  let directIndex = 0;
+  let fallbackIndex = 0;
+
+  const tryFallback = () => {
+    if (fallbackIndex >= fallback.length) {
+      callback(new Error("no clawd server found"), null);
+      return;
+    }
+    const port = fallback[fallbackIndex++];
+    probe(port, discoverTimeoutMs, (ok) => {
+      if (!ok) { tryFallback(); return; }
+      postPerm(port, payload, permTimeoutMs, callback, options);
+    }, options);
+  };
+
+  const tryDirect = () => {
+    if (directIndex >= direct.length) { tryFallback(); return; }
+    const port = direct[directIndex++];
+    probe(port, discoverTimeoutMs, (ok) => {
+      if (!ok) { tryDirect(); return; }
+      postPerm(port, payload, permTimeoutMs, callback, options);
+    }, options);
+  };
+
+  tryDirect();
+}
+
 function postStateToPort(port, payload, timeoutMs, callback, options = {}) {
   const httpRequest = options.httpRequest || http.request;
   const req = httpRequest(
@@ -362,6 +436,8 @@ module.exports = {
   clearRuntimeConfig,
   discoverClawdPort,
   getPortCandidates,
+  postPermissionToPort,
+  postPermissionToRunningServer,
   postStateToRunningServer,
   probePort,
   readHostPrefix,
