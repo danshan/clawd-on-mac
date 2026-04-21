@@ -113,13 +113,6 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		0F6EC0653DC9741EB3824D46 /* AutoUpdate */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = AutoUpdate;
-			sourceTree = "<group>";
-		};
 		215ACA8A57511F2844F2A393 = {
 			isa = PBXGroup;
 			children = (
@@ -149,13 +142,6 @@
 				0047BEF6BBDB53D6FB61D9BE /* UpdateChecker.swift */,
 			);
 			path = Update;
-			sourceTree = "<group>";
-		};
-		29A10C19543B55F48318C00B /* Rendering */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Rendering;
 			sourceTree = "<group>";
 		};
 		2FC9A61F4B757BECE1F457DF /* App */ = {
@@ -205,13 +191,6 @@
 				FE935051957E6809E80B0DA3 /* ClawdOnMac.app */,
 			);
 			name = Products;
-			sourceTree = "<group>";
-		};
-		6488C3DE6DAA200B794D5DB3 /* Menu */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Menu;
 			sourceTree = "<group>";
 		};
 		834181A5EFE0CDDCD6B4EFC4 /* Hooks */ = {
@@ -303,15 +282,11 @@
 				EDB8C200A59E77DBE974C65D /* Animation */,
 				2FC9A61F4B757BECE1F457DF /* App */,
 				422E65C4EE611A8CAF2F9C69 /* Audio */,
-				0F6EC0653DC9741EB3824D46 /* AutoUpdate */,
 				98FE52C8170C7DF970CB7D97 /* Bubble */,
 				8B802727CC070B46755C4467 /* Dashboard */,
 				30D68126A2B76F1E03AB8FE6 /* EyeTracking */,
 				834181A5EFE0CDDCD6B4EFC4 /* Hooks */,
 				61595BAB41711E12CA105048 /* i18n */,
-				6488C3DE6DAA200B794D5DB3 /* Menu */,
-				D9150BA34D12CED1C20532E1 /* Reactions */,
-				29A10C19543B55F48318C00B /* Rendering */,
 				E187CD431B50DC53D34301EA /* Server */,
 				85141B71C1562206FC2FF34F /* Settings */,
 				919341DC53CE07DBE70C8C09 /* Skills */,
@@ -321,13 +296,6 @@
 				8514B02C5FA75701B8ED2D10 /* Windows */,
 			);
 			path = Sources;
-			sourceTree = "<group>";
-		};
-		D9150BA34D12CED1C20532E1 /* Reactions */ = {
-			isa = PBXGroup;
-			children = (
-			);
-			path = Reactions;
 			sourceTree = "<group>";
 		};
 		E187CD431B50DC53D34301EA /* Server */ = {
