@@ -95,12 +95,10 @@ class InputWindowController: NSWindowController {
     // MARK: - Mouse events
 
     override func mouseDown(with event: NSEvent) {
-        // In mini mode, double-click exits
-        if let mini = miniModeController, mini.miniMode {
-            if event.clickCount >= 2 {
-                mini.exitMiniMode()
-                return
-            }
+        // In mini mode, single click exits
+        if let mini = miniModeController, mini.miniMode, !mini.miniTransitioning {
+            mini.exitMiniMode()
+            return
         }
 
         dragStartPosition = event.locationInWindow

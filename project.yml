@@ -24,6 +24,7 @@ targets:
     sources:
       - path: Sources
         type: group
+      - path: Resources/Assets.xcassets
       - path: Resources/themes
         type: folder
         buildPhase: resources
