@@ -364,6 +364,11 @@ class InputWindowController: NSWindowController {
     }
 }
 
+/// Content view that accepts first-mouse so clicks work without prior focus.
+private class ClickThroughView: NSView {
+    override func acceptsFirstMouse(for event: NSEvent?) -> Bool { true }
+}
+
 class InputPanel: NSPanel {
     override var canBecomeKey: Bool { true }
     override var canBecomeMain: Bool { false }
@@ -375,6 +380,18 @@ class InputPanel: NSPanel {
 
     private var hitCheckTimer: Timer?
     private var mouseInPetArea = false
+
+    override init(
+        contentRect: NSRect,
+        styleMask style: NSWindow.StyleMask,
+        backing backingStoreType: NSWindow.BackingStoreType,
+        defer flag: Bool
+    ) {
+        super.init(contentRect: contentRect, styleMask: style, backing: backingStoreType, defer: flag)
+        let view = ClickThroughView(frame: contentRect)
+        view.autoresizingMask = [.width, .height]
+        self.contentView = view
+    }
 
     deinit {
         stopHitChecking()
