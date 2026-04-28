@@ -1297,6 +1297,7 @@ class HTTPServer {
         case ("POST", 4) where segments[2] == "backup" && segments[3] == "pull":
             do {
                 try sm.gitBackup.pull()
+                try sm.reconcileCentralSkills()
                 sendJSON(["status": "ok"], connection: connection)
             } catch { sendError(error, connection: connection) }
 
@@ -1311,6 +1312,7 @@ class HTTPServer {
             }
             do {
                 try sm.gitBackup.cloneInto(url: url)
+                try sm.reconcileCentralSkills()
                 sendJSON(["status": "ok"], connection: connection)
             } catch { sendError(error, connection: connection) }
 
@@ -1340,6 +1342,7 @@ class HTTPServer {
             }
             do {
                 try sm.gitBackup.restoreVersion(tag: tag)
+                try sm.reconcileCentralSkills()
                 sendJSON(["status": "ok"], connection: connection)
             } catch { sendError(error, connection: connection) }
 

@@ -67,6 +67,61 @@ final class SkillsManager {
         }
     }
 
+    /// Reconcile the central skills directory with the database.
+    /// Registers skill directories that exist on disk but are missing from the DB,
+    /// and removes DB records whose central_path no longer exists.
+    /// Call this after git restore, pull, or clone operations.
+    func reconcileCentralSkills() throws {
+        let fm = FileManager.default
+        let existing = try database.getAllSkills()
+        let dbPaths = Set(existing.map(\.centralPath))
+
+        // Scan filesystem for new skills
+        guard let entries = try? fm.contentsOfDirectory(at: centralSkillsDir,
+                                                        includingPropertiesForKeys: [.isDirectoryKey]) else {
+            return
+        }
+
+        var addedCount = 0
+        for entry in entries {
+            var isDir: ObjCBool = false
+            guard fm.fileExists(atPath: entry.path, isDirectory: &isDir), isDir.boolValue else { continue }
+            guard SkillScanner.isValidSkillDir(entry) else { continue }
+
+            let pathStr = entry.path
+            if !dbPaths.contains(pathStr) {
+                let meta = SkillScanner.parseSkillMD(at: entry)
+                let hash = SkillScanner.contentHash(of: entry)
+                let now = Int64(Date().timeIntervalSince1970 * 1000)
+                let skillId = UUID().uuidString
+
+                let record = SkillRecord(
+                    id: skillId, name: meta.name ?? entry.lastPathComponent,
+                    description: meta.description,
+                    sourceType: "local", sourceRef: nil,
+                    sourceRefResolved: nil, sourceSubpath: nil, sourceBranch: nil,
+                    sourceRevision: nil, remoteRevision: nil,
+                    centralPath: pathStr, contentHash: hash,
+                    enabled: true, status: "ok", updateStatus: "unknown",
+                    lastCheckedAt: nil, lastCheckError: nil,
+                    createdAt: now, updatedAt: now
+                )
+                try database.insertSkill(record)
+                addedCount += 1
+            }
+        }
+
+        // Remove DB records whose central_path no longer exists on disk
+        if addedCount > 0 {
+            let currentPaths = Set(entries.map { $0.path })
+            for skill in existing {
+                if !currentPaths.contains(skill.centralPath) {
+                    try database.deleteSkill(id: skill.id)
+                }
+            }
+        }
+    }
+
     /// Re-parse SKILL.md for all installed skills and update descriptions in DB
     func rescanDescriptions() {
         do {
