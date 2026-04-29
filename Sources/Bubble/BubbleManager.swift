@@ -150,26 +150,55 @@ class BubbleWindowController: NSWindowController {
            .replacingOccurrences(of: "'", with: "&#39;")
     }
 
+    /// Format tool input for user-friendly display instead of raw JSON.
+    private func formatToolInput(_ toolName: String, _ input: [String: Any]?) -> String {
+        guard let input = input, !input.isEmpty else { return "" }
+        let name = toolName.lowercased()
+
+        // Per-tool smart formatting
+        if name.contains("bash") || name.contains("execute"), let cmd = input["command"] as? String {
+            return "<div class='detail-label'>Command</div><div class='detail-code'>\(htmlEscape(truncate(cmd, 200)))</div>"
+        }
+        if (name.contains("edit") || name.contains("write") || name.contains("read") || name.contains("create")),
+           let path = input["file_path"] as? String ?? input["path"] as? String {
+            var html = "<div class='detail-label'>File</div><div class='detail-value'>\(htmlEscape(truncate(path, 150)))</div>"
+            if let desc = input["description"] as? String {
+                html += "<div class='detail-label'>Description</div><div class='detail-value'>\(htmlEscape(truncate(desc, 150)))</div>"
+            }
+            return html
+        }
+        if (name.contains("glob") || name.contains("grep") || name.contains("search")),
+           let pattern = input["pattern"] as? String {
+            return "<div class='detail-label'>Pattern</div><div class='detail-code'>\(htmlEscape(truncate(pattern, 150)))</div>"
+        }
+
+        // Fallback: render as key-value list
+        var html = ""
+        for (key, value) in input.sorted(by: { $0.key < $1.key }) {
+            let valStr: String
+            if let s = value as? String {
+                valStr = truncate(s, 120)
+            } else if let arr = value as? [Any] {
+                valStr = "[\(arr.count) items]"
+            } else {
+                valStr = truncate(String(describing: value), 120)
+            }
+            html += "<div class='detail-row'><span class='detail-key'>\(htmlEscape(key)):</span> <span class='detail-val'>\(htmlEscape(valStr))</span></div>"
+        }
+        return html
+    }
+
+    private func truncate(_ s: String, _ max: Int) -> String {
+        if s.count <= max { return s }
+        return String(s.prefix(max - 1)) + "\u{2026}"
+    }
+
     private func buildPermissionHTML(_ entry: PermissionEntry) -> String {
         if entry.isElicitation {
             return buildElicitationHTML(entry)
         }
         let toolDisplay = htmlEscape(entry.toolName)
-        let inputDisplay: String
-        if let input = entry.toolInput {
-            if let jsonData = try? JSONSerialization.data(withJSONObject: input, options: [.prettyPrinted, .sortedKeys]),
-               let jsonStr = String(data: jsonData, encoding: .utf8) {
-                inputDisplay = htmlEscape(jsonStr)
-            } else {
-                inputDisplay = input.map { "\(htmlEscape($0.key)): \(htmlEscape(String(describing: $0.value)))" }.joined(separator: "\n")
-            }
-        } else {
-            inputDisplay = ""
-        }
-        let escapedTool = toolDisplay.replacingOccurrences(of: "'", with: "\\'")
-        let escapedInput = inputDisplay
-            .replacingOccurrences(of: "'", with: "\\'")
-            .replacingOccurrences(of: "\n", with: "\\n")
+        let inputDisplay = formatToolInput(entry.toolName, entry.toolInput)
 
         var suggestionsHTML = ""
         for (index, suggestion) in entry.suggestions.enumerated() {
@@ -186,26 +215,33 @@ class BubbleWindowController: NSWindowController {
         body { font-family: -apple-system, BlinkMacSystemFont, sans-serif; font-size: 12px;
                background: rgba(30,30,30,0.95); color: #e0e0e0; border-radius: 12px;
                padding: 12px; overflow: hidden; -webkit-user-select: none; }
-        .tool { font-weight: 600; color: #7eb8ff; margin-bottom: 6px; }
-        .input { font-family: 'SF Mono', monospace; font-size: 10px; color: #aaa;
-                 white-space: pre-wrap; max-height: 60px; overflow-y: auto; margin-bottom: 8px;
-                 padding: 4px; background: rgba(0,0,0,0.3); border-radius: 4px; }
+        .tool { font-weight: 600; color: #7eb8ff; margin-bottom: 6px; font-size: 13px; }
+        .detail-label { font-size: 10px; color: #888; margin-top: 4px; text-transform: uppercase; letter-spacing: 0.5px; }
+        .detail-value { font-size: 11px; color: #ccc; margin-bottom: 4px; word-break: break-all; }
+        .detail-code { font-family: 'SF Mono', monospace; font-size: 10px; color: #b8d4f0;
+                       padding: 4px 6px; background: rgba(0,0,0,0.3); border-radius: 4px;
+                       margin-bottom: 4px; white-space: pre-wrap; max-height: 60px; overflow-y: auto; }
+        .detail-row { font-size: 11px; margin-bottom: 2px; }
+        .detail-key { color: #888; }
+        .detail-val { color: #ccc; }
+        .input-section { margin-bottom: 8px; }
         .actions { display: flex; gap: 6px; flex-wrap: wrap; }
         button { padding: 4px 12px; border-radius: 6px; border: 1px solid #555; background: #333;
                  color: #e0e0e0; cursor: pointer; font-size: 11px; }
         button:hover { background: #444; }
         button.allow { background: #2d6a2d; border-color: #3a8a3a; }
         button.deny { background: #6a2d2d; border-color: #8a3a3a; }
-        .suggestion { background: #2d4a6a; border-color: #3a6a8a; }
+        .suggestion { background: #2d4a6a; border-color: #3a6a8a; margin-top: 4px; }
+        .suggestions { display: flex; flex-direction: column; gap: 4px; margin-top: 6px; }
         </style></head>
         <body>
-        <div class='tool'>\(escapedTool)</div>
-        <div class='input'>\(escapedInput)</div>
+        <div class='tool'>\(toolDisplay)</div>
+        <div class='input-section'>\(inputDisplay)</div>
         <div class='actions'>
           <button class='allow' onclick="respond('allow')">Allow</button>
           <button class='deny' onclick="respond('deny')">Deny</button>
-          \(suggestionsHTML)
         </div>
+        \(suggestionsHTML.isEmpty ? "" : "<div class='suggestions'>\(suggestionsHTML)</div>")
         <script>
         function respond(action) {
           window.webkit.messageHandlers.bubbleAction.postMessage(action);

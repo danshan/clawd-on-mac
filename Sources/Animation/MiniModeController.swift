@@ -27,6 +27,7 @@ class MiniModeController {
 
     private var animationTimer: Timer?
     private var transitionClearTask: DispatchWorkItem?
+    private var exitSafetyTask: DispatchWorkItem?
 
     enum Edge {
         case left, right
@@ -156,9 +157,10 @@ class MiniModeController {
     // MARK: - Exit mini mode (parabolic jump back)
 
     func exitMiniMode() {
-        guard miniMode, !miniTransitioning else { return }
+        guard miniMode else { return }
         guard let window = renderWindow, let screen = window.screen ?? NSScreen.main else { return }
 
+        cancelAll()
         miniTransitioning = true
         let wa = screen.visibleFrame
         let size = window.frame.size
@@ -192,6 +194,8 @@ class MiniModeController {
             duration: JUMP_DURATION
         ) { [weak self] in
             guard let self = self else { return }
+            self.exitSafetyTask?.cancel()
+            self.exitSafetyTask = nil
             self.miniMode = false
             self.miniPeeked = false
             self.miniSleepPeeked = false
@@ -204,6 +208,26 @@ class MiniModeController {
                 }
             }
         }
+
+        // Safety timeout: force-reset if onDone never fires
+        let safety = DispatchWorkItem { [weak self] in
+            guard let self = self else { return }
+            self.animationTimer?.invalidate()
+            self.animationTimer = nil
+            self.miniMode = false
+            self.miniPeeked = false
+            self.miniSleepPeeked = false
+            self.miniTransitioning = false
+
+            Task { [weak self] in
+                await self?.stateActor?.setMiniMode(false)
+                await MainActor.run {
+                    self?.onMiniStateChanged?(false)
+                }
+            }
+        }
+        exitSafetyTask = safety
+        DispatchQueue.main.asyncAfter(deadline: .now() + JUMP_DURATION * 3, execute: safety)
     }
 
     // MARK: - Peek animations
@@ -351,6 +375,8 @@ class MiniModeController {
         animationTimer?.invalidate()
         animationTimer = nil
         transitionClearTask?.cancel()
+        exitSafetyTask?.cancel()
+        exitSafetyTask = nil
         miniTransitioning = false
     }
 }

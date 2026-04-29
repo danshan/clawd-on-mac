@@ -95,8 +95,8 @@ class InputWindowController: NSWindowController {
     // MARK: - Mouse events
 
     override func mouseDown(with event: NSEvent) {
-        // In mini mode, single click exits
-        if let mini = miniModeController, mini.miniMode, !mini.miniTransitioning {
+        // In mini mode, single click exits (allow even during stale transition)
+        if let mini = miniModeController, mini.miniMode {
             mini.exitMiniMode()
             return
         }
@@ -125,7 +125,12 @@ class InputWindowController: NSWindowController {
     override func mouseUp(with event: NSEvent) {
         if isDragging {
             if let mini = miniModeController {
-                _ = mini.checkSnapOnDragEnd()
+                let snapped = mini.checkSnapOnDragEnd()
+                if !snapped {
+                    clampToNearestScreen()
+                }
+            } else {
+                clampToNearestScreen()
             }
         } else {
             handleClick(event)
@@ -329,11 +334,7 @@ class InputWindowController: NSWindowController {
         frame.origin.x += deltaX
         frame.origin.y -= deltaY
 
-        if let screen = window.screen ?? NSScreen.main {
-            let wa = screen.visibleFrame
-            frame.origin.y = max(wa.origin.y, min(wa.maxY - frame.height, frame.origin.y))
-            frame.origin.x = max(wa.origin.x - frame.width * 0.5, min(wa.maxX - frame.width * 0.5, frame.origin.x))
-        }
+        // No single-screen clamp during drag; post-drag clamp handles bounds
 
         window.setFrame(frame, display: true)
 
@@ -346,6 +347,38 @@ class InputWindowController: NSWindowController {
 
         // Reposition bubbles to follow pet
         bubbleManager?.repositionAll(petFrame: frame)
+    }
+
+    /// After drag ends, clamp to nearest screen's visible frame so the pet doesn't end up off-screen.
+    private func clampToNearestScreen() {
+        guard let window = window else { return }
+        let center = CGPoint(x: window.frame.midX, y: window.frame.midY)
+
+        // Find screen whose frame is closest to window center
+        let screen = NSScreen.screens.min(by: { a, b in
+            distanceToRect(point: center, rect: a.visibleFrame) < distanceToRect(point: center, rect: b.visibleFrame)
+        }) ?? NSScreen.main
+
+        guard let wa = screen?.visibleFrame else { return }
+        var frame = window.frame
+        frame.origin.y = max(wa.origin.y, min(wa.maxY - frame.height, frame.origin.y))
+        frame.origin.x = max(wa.origin.x - frame.width * 0.5, min(wa.maxX - frame.width * 0.5, frame.origin.x))
+
+        window.setFrame(frame, display: true)
+        if let rw = renderWindowController?.window {
+            var rwFrame = rw.frame
+            rwFrame.origin = frame.origin
+            rw.setFrame(rwFrame, display: true)
+        }
+        bubbleManager?.repositionAll(petFrame: frame)
+    }
+
+    private func distanceToRect(point: CGPoint, rect: NSRect) -> CGFloat {
+        let cx = max(rect.minX, min(point.x, rect.maxX))
+        let cy = max(rect.minY, min(point.y, rect.maxY))
+        let dx = point.x - cx
+        let dy = point.y - cy
+        return dx * dx + dy * dy
     }
 
     func updateHitbox(for state: String, hitBox: HitBox) {
