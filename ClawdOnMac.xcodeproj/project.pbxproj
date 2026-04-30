@@ -31,6 +31,7 @@
 		69C51AF12EEF2F28E5D14B81 /* zh.lproj in Resources */ = {isa = PBXBuildFile; fileRef = B186DE0D76BCF255DEB63C3E /* zh.lproj */; };
 		6C0CC48983409543DC1CAC13 /* AgentRegistry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A8944B2447D7614D357CF8B0 /* AgentRegistry.swift */; };
 		743DABAFFF859122598BE85D /* DashboardHTML.swift in Sources */ = {isa = PBXBuildFile; fileRef = 34EBB04E1C79528C7CF1BB1B /* DashboardHTML.swift */; };
+		B1C2D3E4F5A6789012345679 /* DashboardPanelController.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6789012345678 /* DashboardPanelController.swift */; };
 		7B96E0AA523CC23A9244E4CF /* icons in Resources */ = {isa = PBXBuildFile; fileRef = 9828BC620AA1B1062508C0F8 /* icons */; };
 		7FE942514CB52013509918D0 /* SkillInstaller.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5DD11411047C45A36B9E0418 /* SkillInstaller.swift */; };
 		8234C4BD062E44141CCB61D4 /* en.lproj in Resources */ = {isa = PBXBuildFile; fileRef = E77260392A68B56CD5BD8A7D /* en.lproj */; };
@@ -61,6 +62,7 @@
 		2C8C05AA5121B541C72D6C01 /* MouseTracker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MouseTracker.swift; sourceTree = "<group>"; };
 		2CEC8AE10AF8DE4FA493C7A7 /* SettingsController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsController.swift; sourceTree = "<group>"; };
 		34EBB04E1C79528C7CF1BB1B /* DashboardHTML.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardHTML.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6789012345678 /* DashboardPanelController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardPanelController.swift; sourceTree = "<group>"; };
 		522BA47A6F17C4827D4AED72 /* SkillsMarketplace.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SkillsMarketplace.swift; sourceTree = "<group>"; };
 		55F01079FC8A719185012D63 /* InputWindowController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InputWindowController.swift; sourceTree = "<group>"; };
 		56367B79DE99747F7F28C9B5 /* ProjectManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectManager.swift; sourceTree = "<group>"; };
@@ -226,6 +228,7 @@
 			isa = PBXGroup;
 			children = (
 				34EBB04E1C79528C7CF1BB1B /* DashboardHTML.swift */,
+				A1B2C3D4E5F6789012345678 /* DashboardPanelController.swift */,
 				BCEF0642A449D18B0FA1E01D /* ToolIcons.swift */,
 				AA4B774B9ACF6031B99FFCE2 /* ToolScanner.swift */,
 			);
@@ -408,6 +411,7 @@
 				FCFE5B343F655D5D5F8B6512 /* BubbleManager.swift in Sources */,
 				8AD5CEA051BAFA1D1B19F18B /* CodexLogMonitor.swift in Sources */,
 				743DABAFFF859122598BE85D /* DashboardHTML.swift in Sources */,
+				B1C2D3E4F5A6789012345679 /* DashboardPanelController.swift in Sources */,
 				87C91CCA452DB000E1F68193 /* GeminiLogMonitor.swift in Sources */,
 				FE6AD3A3D6E7F3915950C62E /* GitBackup.swift in Sources */,
 				1C4C1F8E64A307EC1333CF05 /* HTTPServer.swift in Sources */,

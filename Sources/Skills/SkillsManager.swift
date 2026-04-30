@@ -274,6 +274,90 @@ final class SkillsManager {
         }
     }
 
+    func unsyncFromAllTools(skillId: String) throws {
+        let adapters = try ToolAdapter.allAdapters(db: database).filter { $0.isInstalled() }
+        for adapter in adapters {
+            try unsyncFromTool(skillId: skillId, toolKey: adapter.key)
+        }
+    }
+
+    // MARK: - Bulk Sync/Unsync
+
+    struct BulkSyncResult: Codable {
+        let successCount: Int
+        let failedCount: Int
+        let skippedCount: Int
+        let failures: [BulkSyncFailure]
+    }
+
+    struct BulkSyncFailure: Codable {
+        let skillId: String
+        let skillName: String
+        let error: String
+    }
+
+    /// Sync all enabled skills to a specific tool.
+    /// Skips skills already synced to that tool.
+    func syncAllSkillsToTool(toolKey: String) throws -> BulkSyncResult {
+        let skills = try database.getAllSkills().filter { $0.enabled }
+        var successCount = 0
+        var skippedCount = 0
+        var failures: [BulkSyncFailure] = []
+
+        for skill in skills {
+            let existingTargets = try database.getTargets(forSkill: skill.id)
+            if existingTargets.contains(where: { $0.tool == toolKey }) {
+                skippedCount += 1
+                continue
+            }
+            do {
+                try syncToTool(skillId: skill.id, toolKey: toolKey)
+                successCount += 1
+            } catch {
+                failures.append(BulkSyncFailure(
+                    skillId: skill.id,
+                    skillName: skill.name,
+                    error: error.localizedDescription
+                ))
+            }
+        }
+
+        return BulkSyncResult(
+            successCount: successCount,
+            failedCount: failures.count,
+            skippedCount: skippedCount,
+            failures: failures
+        )
+    }
+
+    /// Unsync all skills from a specific tool.
+    func unsyncAllSkillsFromTool(toolKey: String) throws -> BulkSyncResult {
+        let allTargets = try database.getAllTargets().filter { $0.tool == toolKey }
+        var successCount = 0
+        var failures: [BulkSyncFailure] = []
+
+        for target in allTargets {
+            do {
+                try unsyncFromTool(skillId: target.skillId, toolKey: toolKey)
+                successCount += 1
+            } catch {
+                let skill = try? database.getSkill(id: target.skillId)
+                failures.append(BulkSyncFailure(
+                    skillId: target.skillId,
+                    skillName: skill?.name ?? target.skillId,
+                    error: error.localizedDescription
+                ))
+            }
+        }
+
+        return BulkSyncResult(
+            successCount: successCount,
+            failedCount: failures.count,
+            skippedCount: 0,
+            failures: failures
+        )
+    }
+
     // MARK: - Discovery
 
     func discoverSkills() throws -> [DiscoveredSkillRecord] {

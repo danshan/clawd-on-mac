@@ -391,11 +391,73 @@ function renderSettings() {
     }
     h += `</section>`;
 
+    // Agents
+    const agentNames = {'claude-code':'Claude Code','codex':'Codex CLI','copilot-cli':'Copilot CLI','cursor-agent':'Cursor Agent','gemini-cli':'Gemini CLI','codebuddy':'CodeBuddy','kiro-cli':'Kiro CLI','opencode':'opencode'};
+    const agents = settings.agents || {};
+    h += `<section class="section"><h3>Agents</h3>`;
+    h += `<div style="font-size:.78rem;color:var(--text3);margin-bottom:10px">Enable/disable agents and their permission prompts.</div>`;
+    for (const id of Object.keys(agentNames)) {
+      const cfg = agents[id] || {enabled:true, permissionsEnabled:true};
+      const name = agentNames[id];
+      h += `<div class="setting-row" style="display:flex;align-items:center;gap:12px">
+        <span class="setting-label" style="flex:1">${esc(name)}<span class="setting-saved" id="saved-agent-${id}">Saved</span></span>
+        <label class="toggle" title="Enabled"><input type="checkbox" ${cfg.enabled !== false ? 'checked' : ''} onchange="saveAgentSetting('${id}','enabled',this.checked)"><span class="slider"></span></label>
+        <label class="toggle" title="Permissions" style="opacity:${cfg.enabled !== false ? '1' : '.4'}"><input type="checkbox" ${cfg.permissionsEnabled !== false ? 'checked' : ''} onchange="saveAgentSetting('${id}','permissionsEnabled',this.checked)" ${cfg.enabled === false ? 'disabled' : ''}><span class="slider"></span></label>
+      </div>`;
+    }
+    h += `</section>`;
+
+    // Animations (loaded async)
+    h += `<section class="section"><h3>Animations</h3><div id="animations-section"><span class="spinner"></span> Loading...</div></section>`;
+
     app.innerHTML = h;
     loadPrefReposList();
+    loadAnimationsSection();
   }).catch(e => {
     app.innerHTML = `<div class="empty">Error loading settings: ${esc(String(e))}</div>`;
   });
+}
+
+function saveAgentSetting(agentId, field, value) {
+  fetch('/api/settings').then(r=>r.json()).then(settings => {
+    const agents = settings.agents || {};
+    if (!agents[agentId]) agents[agentId] = {enabled:true, permissionsEnabled:true};
+    agents[agentId][field] = value;
+    saveSetting('agents', agents);
+    const el = document.getElementById('saved-agent-' + agentId);
+    if (el) { el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 1200); }
+  });
+}
+
+function loadAnimationsSection() {
+  const el = document.getElementById('animations-section');
+  if (!el) return;
+  fetch('/api/theme/states').then(r=>r.json()).then(data => {
+    if (data.error) { el.innerHTML = `<div style="color:var(--text3)">${esc(data.error)}</div>`; return; }
+    let h = `<div style="font-size:.78rem;color:var(--text3);margin-bottom:10px">Theme: <strong>${esc(data.themeName)}</strong> — ${data.states.length} animation states</div>`;
+    h += `<div style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;padding:8px">`;
+    for (const s of data.states) {
+      const badges = (s.isWide ? '<span style="color:var(--orange);font-size:.7rem;font-weight:600;margin-left:6px" title="Wide hitbox">W</span>' : '')
+                   + (s.isSleeping ? '<span style="color:var(--blue);font-size:.7rem;font-weight:600;margin-left:4px" title="Sleeping hitbox">S</span>' : '');
+      h += `<div style="display:flex;align-items:center;padding:4px 8px;border-bottom:1px solid var(--border)">
+        <span style="font-size:.82rem;font-weight:500;min-width:120px">${esc(s.state)}${badges}</span>
+        <span style="font-size:.72rem;color:var(--text3);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(s.files.join(', '))}</span>
+      </div>`;
+    }
+    h += `</div>`;
+    if (data.themesDir) {
+      h += `<button class="btn btn-sm" style="margin-top:10px" onclick="openThemeFolder()">Open Theme Folder</button>`;
+    }
+    el.innerHTML = h;
+  }).catch(e => { el.innerHTML = `<div style="color:var(--red)">Failed to load animations</div>`; });
+}
+
+function openThemeFolder() {
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.dashboard) {
+    window.webkit.messageHandlers.dashboard.postMessage({type: 'command', name: 'openThemeFolder'});
+  } else {
+    fetch('/api/settings', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({_command:'openThemeFolder'})});
+  }
 }
 
 function loadPrefReposList() {
@@ -453,12 +515,32 @@ function settingSelect(key, label, current, options) {
 
 function saveSetting(key, value) {
   const body = {}; body[key] = value;
-  fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
-    .then(() => {
-      const el = document.getElementById('saved-' + key);
-      if (el) { el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 1200); }
-    });
+  // If running in WKWebView panel, use bridge; otherwise use HTTP API
+  if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.dashboard) {
+    window.webkit.messageHandlers.dashboard.postMessage({type: 'settings.update', key: key, value: value});
+    const el = document.getElementById('saved-' + key);
+    if (el) { el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 1200); }
+  } else {
+    fetch('/api/settings', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+      .then(() => {
+        const el = document.getElementById('saved-' + key);
+        if (el) { el.classList.add('show'); setTimeout(() => el.classList.remove('show'), 1200); }
+      });
+  }
 }
+
+// Bridge: receive real-time settings changes from Swift
+window.onSettingsChanged = function(snapshot, changedKeys) {
+  // If currently on settings page, re-render to reflect external changes
+  if (location.hash === '#/settings') {
+    renderSettings();
+  }
+};
+
+// Bridge: programmatic navigation from Swift
+window.navigateTo = function(route) {
+  location.hash = route;
+};
 
 function toggleTheme() {
   const html = document.documentElement;
@@ -706,12 +788,16 @@ function renderDetailPanel(s, doc) {
 
   // Synced Tools section (before Location)
   const unsyncedCount = installed.filter(t => !syncedTools.includes(t.key)).length;
+  const syncedCount = installed.filter(t => syncedTools.includes(t.key)).length;
   h += `<div class="dp-section"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px">
-    <h3>Synced Tools</h3>`;
+    <h3>Synced Tools</h3><div style="display:flex;gap:6px">`;
   if (unsyncedCount > 0) {
     h += `<button class="btn btn-sm btn-green" onclick="syncAll('${esc(s.id)}')">Sync All</button>`;
   }
-  h += `</div>`;
+  if (syncedCount > 0) {
+    h += `<button class="btn btn-sm btn-warn" onclick="unsyncAll('${esc(s.id)}')">Unsync All</button>`;
+  }
+  h += `</div></div>`;
   h += `<div style="display:flex;flex-direction:column;gap:4px">`;
   for (const t of installed) {
     const isSynced = syncedTools.includes(t.key);
@@ -1292,6 +1378,10 @@ function syncAll(skillId) {
   fetch(`/api/skills/${encodeURIComponent(skillId)}/sync-all`, {method:'POST'})
     .then(() => { addToActiveScenario(skillId); refreshSkillDetail(skillId); });
 }
+function unsyncAll(skillId) {
+  fetch(`/api/skills/${encodeURIComponent(skillId)}/unsync-all`, {method:'POST'})
+    .then(() => { refreshSkillDetail(skillId); });
+}
 function uninstallSkill(skillId) {
   if (!confirm('Uninstall this skill? This removes it from the central repo and all synced tools.')) return;
   fetch(`/api/skills/${encodeURIComponent(skillId)}`, {method:'DELETE'})
@@ -1845,6 +1935,8 @@ function renderToolConfigRow(t, showPath) {
     <div class="tool-cfg-name">${icon} ${esc(t.displayName)} ${customBadge}</div>
     <div class="tool-cfg-path">${esc(shortPath(t.configPath || t.skillsPath || ''))}</div>
     <div class="tool-cfg-actions">
+      <button class="btn btn-sm btn-green" onclick="bulkSyncToTool('${esc(t.key)}')" title="Sync all skills to this tool" id="bulk-sync-${t.key}">Sync All</button>
+      <button class="btn btn-sm btn-warn" onclick="bulkUnsyncFromTool('${esc(t.key)}')" title="Unsync all skills from this tool" id="bulk-unsync-${t.key}">Unsync All</button>
       ${t.isCustom ? `<button class="btn btn-sm btn-warn" onclick="removeCustomTool('${esc(t.key)}')" title="Remove">\u{00D7}</button>` : ''}
       <label class="toggle"><input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleTool('${esc(t.key)}', this.checked)"><span class="slider"></span></label>
     </div>
@@ -1904,6 +1996,54 @@ function setAllToolsEnabled(enabled) {
     .then(() => renderToolsConfig())
     .catch(e => toast('Failed: ' + e, 'error'));
 }
+
+function bulkSyncToTool(toolKey) {
+  const btn = document.getElementById('bulk-sync-' + toolKey);
+  if (btn) { btn.disabled = true; btn.textContent = 'Syncing...'; }
+  fetch(`/api/skills/bulk-sync/${encodeURIComponent(toolKey)}`, {method:'POST'})
+    .then(r => r.json())
+    .then(result => {
+      if (result.error) { toast('Error: ' + result.error, 'error'); return; }
+      let msg = `Synced ${result.successCount} skills`;
+      if (result.skippedCount > 0) msg += `, ${result.skippedCount} already synced`;
+      if (result.failedCount > 0) msg += `, ${result.failedCount} failed`;
+      toast(msg, result.failedCount > 0 ? 'error' : 'success');
+      if (result.failedCount > 0 && result.failures) {
+        console.warn('Bulk sync failures:', result.failures);
+      }
+      navigate();
+    })
+    .catch(e => { toast('Sync failed: ' + e, 'error'); navigate(); });
+}
+
+function bulkUnsyncFromTool(toolKey) {
+  if (!confirm('Unsync all skills from this tool?')) return;
+  const btn = document.getElementById('bulk-unsync-' + toolKey);
+  if (btn) { btn.disabled = true; btn.textContent = 'Unsyncing...'; }
+  fetch(`/api/skills/bulk-unsync/${encodeURIComponent(toolKey)}`, {method:'POST'})
+    .then(r => r.json())
+    .then(result => {
+      if (result.error) { toast('Error: ' + result.error, 'error'); return; }
+      let msg = `Unsynced ${result.successCount} skills`;
+      if (result.failedCount > 0) msg += `, ${result.failedCount} failed`;
+      toast(msg, result.failedCount > 0 ? 'error' : 'success');
+      navigate();
+    })
+    .catch(e => { toast('Unsync failed: ' + e, 'error'); navigate(); });
+}
+
+// Bridge callback for bulk sync results (when running in WKWebView panel)
+window.onBulkSyncResult = function(result, action) {
+  if (result.error) { toast('Error: ' + result.error, 'error'); return; }
+  const verb = action === 'sync' ? 'Synced' : 'Unsynced';
+  let msg = `${verb} ${result.successCount} skills`;
+  if (result.skippedCount > 0) msg += `, ${result.skippedCount} skipped`;
+  if (result.failedCount > 0) msg += `, ${result.failedCount} failed`;
+  toast(msg, result.failedCount > 0 ? 'error' : 'success');
+  // Refresh current view
+  if (location.hash === '#/skills-tools') renderToolsConfig();
+  else navigate();
+};
 
 // ── Scenarios ──
 

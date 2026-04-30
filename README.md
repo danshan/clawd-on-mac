@@ -33,6 +33,7 @@ A native macOS desktop pet + AI Skills management app, built with Swift. Reacts 
 - **Marketplace integration** — browse [skills.sh](https://skills.sh) marketplace with alltime / trending / hot leaderboards
 - **Git repo as source** — install and update skills from Git repositories
 - **Multi-tool sync** — sync skills to different AI agent tools
+- **Bulk sync/unsync** — one-click sync or unsync all skills for a given tool
 - **Project management** — manage project-level skill configurations
 - **Scenarios** — group skills into switchable configuration sets
 - **Git backup** — version-control your skill library with Git
@@ -44,6 +45,7 @@ A native macOS desktop pet + AI Skills management app, built with Swift. Reacts 
 - **Single instance lock** — file lock ensures only one instance runs
 - **Do Not Disturb** — silences all hook events and permission bubbles
 - **System tray** — status bar menu with size toggle, DND, language switch, dashboard access, etc.
+- **Dashboard popup** — lightweight NSPanel popup for settings, skills dashboard, and bulk sync (triggered from tray menu)
 - **i18n** — English, Chinese, Korean
 - **Auto-update** — checks for new releases automatically
 
@@ -67,7 +69,7 @@ Sources/
   Animation/      — Mini mode controller
   Audio/          — Sound effect management
   Bubble/         — Permission approval bubble windows
-  Dashboard/      — Skills management UI (HTML/CSS/JS in WKWebView)
+  Dashboard/      — Dashboard popup panel (NSPanel + WKWebView), settings integration, bulk skill sync
   EyeTracking/    — Mouse tracking for eye follow
   Hooks/          — Hook registration for agent integrations
   i18n/           — Localization

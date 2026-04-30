@@ -10,6 +10,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var renderWindowController: RenderWindowController?
     private var inputWindowController: InputWindowController?
     private var settingsWindowController: SettingsWindowController?
+    private var dashboardPanelController: DashboardPanelController?
     private var miniModeController: MiniModeController?
     private var cachedDND: Bool = false
     private var cachedSessions: [SessionState] = []
@@ -383,11 +384,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         settingsItem.target = self
         menu.addItem(settingsItem)
 
-        // Dashboard
-        let dashboardItem = NSMenuItem(title: "Dashboard", action: #selector(openDashboard), keyEquivalent: "d")
-        dashboardItem.target = self
-        menu.addItem(dashboardItem)
-
         menu.addItem(NSMenuItem.separator())
 
         // Language submenu
@@ -713,20 +709,36 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     @objc private func openPreferences() {
-        if settingsWindowController == nil {
-            settingsWindowController = SettingsWindowController(
-                settings: settings,
-                stateActor: stateActor,
-                themeLoader: themeLoader
-            )
+        // Feature flag: set to true to use legacy native settings window
+        let useNativeSettings = false
+        if useNativeSettings {
+            if settingsWindowController == nil {
+                settingsWindowController = SettingsWindowController(
+                    settings: settings,
+                    stateActor: stateActor,
+                    themeLoader: themeLoader
+                )
+            }
+            settingsWindowController?.showWindow(nil)
+        } else {
+            if dashboardPanelController == nil {
+                dashboardPanelController = DashboardPanelController(statusItem: trayItem, settings: settings)
+            }
+            if let port = httpServer.activePort {
+                dashboardPanelController?.setServerPort(port)
+            }
+            dashboardPanelController?.toggle()
         }
-        settingsWindowController?.showWindow(nil)
     }
 
     @objc private func openDashboard() {
-        let port = httpServer.activePort ?? 23333
-        let url = URL(string: "http://localhost:\(port)/dashboard")!
-        NSWorkspace.shared.open(url)
+        if dashboardPanelController == nil {
+            dashboardPanelController = DashboardPanelController(statusItem: trayItem, settings: settings)
+        }
+        if let port = httpServer.activePort {
+            dashboardPanelController?.setServerPort(port)
+        }
+        dashboardPanelController?.toggle()
     }
 
     @objc private func handlePetStateChanged() {

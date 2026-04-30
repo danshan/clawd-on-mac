@@ -253,6 +253,41 @@ class HTTPServer {
             return
         }
 
+        // GET /api/theme/states — animation states for current theme
+        if method == "GET" && path == "/api/theme/states" {
+            let currentTheme = (getSettings?()["theme"] as? String) ?? "clawd"
+            if let theme = themeLoader.loadTheme(named: currentTheme) {
+                let wideSet = Set(theme.wideHitboxFiles ?? [])
+                let sleepingSet = Set(theme.sleepingHitboxFiles ?? [])
+                var statesList: [[String: Any]] = []
+                for (state, files) in theme.states.sorted(by: { $0.key < $1.key }) {
+                    let firstFile = (files.first as NSString?)?.lastPathComponent ?? ""
+                    statesList.append([
+                        "state": state,
+                        "files": files.map { ($0 as NSString).lastPathComponent },
+                        "isWide": wideSet.contains(firstFile),
+                        "isSleeping": sleepingSet.contains(firstFile)
+                    ])
+                }
+                let result: [String: Any] = [
+                    "themeName": theme.name,
+                    "states": statesList,
+                    "themesDir": themeLoader.themesDirectory
+                ]
+                if let jsonData = try? JSONSerialization.data(withJSONObject: result),
+                   let jsonString = String(data: jsonData, encoding: .utf8) {
+                    let response = "HTTP/1.1 200 OK\r\nContent-Type: application/json; charset=utf-8\r\nContent-Length: \(jsonData.count)\r\n\r\n\(jsonString)"
+                    sendResponse(response, connection: connection)
+                } else {
+                    sendResponse("HTTP/1.1 500 Internal Server Error\r\nContent-Length: 0\r\n\r\n", connection: connection)
+                }
+            } else {
+                let errBody = "{\"error\":\"No theme loaded\"}"
+                sendResponse("HTTP/1.1 404 Not Found\r\nContent-Type: application/json\r\nContent-Length: \(errBody.count)\r\n\r\n\(errBody)", connection: connection)
+            }
+            return
+        }
+
         if method == "GET" && path == "/api/settings" {
             if let settings = getSettings?(),
                let jsonData = try? JSONSerialization.data(withJSONObject: settings),
@@ -943,6 +978,14 @@ class HTTPServer {
                 sendJSON(["status": "ok"], connection: connection)
             } catch { sendError(error, connection: connection) }
 
+        // POST /api/skills/{id}/unsync-all — unsync from all tools
+        case ("POST", 4) where segments[3] == "unsync-all":
+            let skillId = segments[2]
+            do {
+                try sm.unsyncFromAllTools(skillId: skillId)
+                sendJSON(["status": "ok"], connection: connection)
+            } catch { sendError(error, connection: connection) }
+
         // DELETE /api/skills/{id}/sync/{tool} — unsync
         case ("DELETE", 5) where segments[3] == "sync":
             let skillId = segments[2]
@@ -950,6 +993,22 @@ class HTTPServer {
             do {
                 try sm.unsyncFromTool(skillId: skillId, toolKey: tool)
                 sendJSON(["status": "ok"], connection: connection)
+            } catch { sendError(error, connection: connection) }
+
+        // POST /api/skills/bulk-sync/{tool} — sync all enabled skills to tool
+        case ("POST", 4) where segments[2] == "bulk-sync":
+            let tool = segments[3]
+            do {
+                let result = try sm.syncAllSkillsToTool(toolKey: tool)
+                sendCodable(result, connection: connection)
+            } catch { sendError(error, connection: connection) }
+
+        // POST /api/skills/bulk-unsync/{tool} — unsync all skills from tool
+        case ("POST", 4) where segments[2] == "bulk-unsync":
+            let tool = segments[3]
+            do {
+                let result = try sm.unsyncAllSkillsFromTool(toolKey: tool)
+                sendCodable(result, connection: connection)
             } catch { sendError(error, connection: connection) }
 
         // POST /api/skills/{id}/toggle-enabled — enable/disable skill
