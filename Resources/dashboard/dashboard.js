@@ -18,11 +18,12 @@ const HOME_RE = /^\/Users\/[^\/]+/;
 const esc = s => { if (!s) return ''; const d = document.createElement('div'); d.textContent = s; return d.innerHTML; };
 const shortPath = p => p ? p.replace(HOME_RE, '~') : '';
 const svg = (id, cls) => {
-  const builtinPng = ['claude-code','codex-cli','copilot-cli','cursor','droid','kimi','kiro','opencode','pi','qoder'];
+  const builtinPng = ['antigravity','claude-code','codex','codex-cli','copilot-cli','cursor','droid','gemini-cli','github-copilot','kimi','kiro','opencode','pi','qoder'];
+  const darkInvert = ['codex','codex-cli','copilot-cli','cursor','github-copilot','opencode'];
   if (builtinPng.includes(id) || id.includes('_')) {
-    // Built-in PNGs or custom tools (underscore keys)
     const imgId = id.replace(/_/g, '-');
-    return `<img src="/icons/${imgId}.png" alt="" width="20" height="20" style="border-radius:4px" class="${cls||''}" onerror="this.outerHTML=svgFallback('${id}','${cls||''}')">`;
+    const invertCls = darkInvert.includes(id) || darkInvert.includes(imgId) ? ' dark-invert' : '';
+    return `<img src="/icons/${imgId}.png" alt="" width="20" height="20" style="border-radius:4px" class="${cls||''}${invertCls}" onerror="this.outerHTML=svgFallback('${id}','${cls||''}')">`;
   }
   return svgFallback(id, cls);
 };
