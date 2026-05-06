@@ -76,6 +76,7 @@ class DashboardPanelController: NSObject {
         win.titleVisibility = .visible
         win.isReleasedWhenClosed = false
         win.collectionBehavior = [.fullScreenAuxiliary]
+        win.delegate = self
 
         // Size constraints
         win.minSize = NSSize(width: 600, height: 450)
@@ -116,6 +117,15 @@ class DashboardPanelController: NSObject {
 
         loadDashboardContent()
 
+        // Make app visible in CMD+Tab while dashboard is open
+        // Workaround: transitioning through .prohibited forces macOS to re-evaluate
+        NSApp.setActivationPolicy(.prohibited)
+        NSApp.setActivationPolicy(.regular)
+        // Explicitly set dock icon (needed after runtime policy switch)
+        if let icon = Self.loadAppIcon() {
+            NSApp.applicationIconImage = icon
+        }
+
         if !win.isVisible {
             win.center()
         }
@@ -125,6 +135,7 @@ class DashboardPanelController: NSObject {
 
     func hide() {
         window?.orderOut(nil)
+        restoreActivationPolicyIfNeeded()
     }
 
     func showAtRoute(_ route: String) {
@@ -150,6 +161,37 @@ class DashboardPanelController: NSObject {
             let url = URL(string: "http://localhost:\(serverPort)/dashboard")!
             webView.load(URLRequest(url: url))
         }
+    }
+}
+
+// MARK: - NSWindowDelegate
+
+extension DashboardPanelController: NSWindowDelegate {
+
+    func windowWillClose(_ notification: Notification) {
+        restoreActivationPolicyIfNeeded()
+    }
+}
+
+// MARK: - Private Helpers
+
+private extension DashboardPanelController {
+
+    func restoreActivationPolicyIfNeeded() {
+        // Only revert to .accessory if user hasn't enabled "Show in Dock"
+        let showDock = settings?.get(\.showDock) ?? false
+        if !showDock {
+            NSApp.setActivationPolicy(.accessory)
+        }
+    }
+
+    static func loadAppIcon() -> NSImage? {
+        // Try asset catalog first
+        if let icon = NSImage(named: "AppIcon") {
+            return icon
+        }
+        // Fallback: use the system icon for our own bundle
+        return NSWorkspace.shared.icon(forFile: Bundle.main.bundlePath)
     }
 }
 

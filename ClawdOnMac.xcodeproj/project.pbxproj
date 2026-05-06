@@ -52,6 +52,7 @@
 		FCFE5B343F655D5D5F8B6512 /* BubbleManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = E2546641F13FE209D0FDC276 /* BubbleManager.swift */; };
 		FD0F97346CE9A1E39A5988E8 /* ko.lproj in Resources */ = {isa = PBXBuildFile; fileRef = AE5FE0BFD2BA58EAD80B8241 /* ko.lproj */; };
 		FE6AD3A3D6E7F3915950C62E /* GitBackup.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8055CC603848A1643B244286 /* GitBackup.swift */; };
+		D6B5F9A2C3E4078912345678 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C5A4E8F1B2D3967801234567 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -101,6 +102,7 @@
 		F9E2675D95F5FB8D2394C998 /* HTTPServer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HTTPServer.swift; sourceTree = "<group>"; };
 		FCF403DCD7A2B61DFF8210BE /* MiniModeController.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MiniModeController.swift; sourceTree = "<group>"; };
 		FE935051957E6809E80B0DA3 /* ClawdOnMac.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = ClawdOnMac.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C5A4E8F1B2D3967801234567 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Resources/Assets.xcassets; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,6 +120,7 @@
 		215ACA8A57511F2844F2A393 = {
 			isa = PBXGroup;
 			children = (
+				C5A4E8F1B2D3967801234567 /* Assets.xcassets */,
 				B28D5BEE8F8BD7DAF1FB0CF3 /* dashboard */,
 				D03D0B9583AA74702A9CD805 /* hooks */,
 				9828BC620AA1B1062508C0F8 /* icons */,
@@ -387,6 +390,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D6B5F9A2C3E4078912345678 /* Assets.xcassets in Resources */,
 				F7BD1A0BB490DBF40777031B /* dashboard in Resources */,
 				8234C4BD062E44141CCB61D4 /* en.lproj in Resources */,
 				21416113FF8E6098293D8529 /* hooks in Resources */,

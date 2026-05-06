@@ -1935,8 +1935,6 @@ function renderToolConfigRow(t, showPath) {
     <div class="tool-cfg-name">${icon} ${esc(t.displayName)} ${customBadge}</div>
     <div class="tool-cfg-path">${esc(shortPath(t.configPath || t.skillsPath || ''))}</div>
     <div class="tool-cfg-actions">
-      <button class="btn btn-sm btn-green" onclick="bulkSyncToTool('${esc(t.key)}')" title="Sync all skills to this tool" id="bulk-sync-${t.key}">Sync All</button>
-      <button class="btn btn-sm btn-warn" onclick="bulkUnsyncFromTool('${esc(t.key)}')" title="Unsync all skills from this tool" id="bulk-unsync-${t.key}">Unsync All</button>
       ${t.isCustom ? `<button class="btn btn-sm btn-warn" onclick="removeCustomTool('${esc(t.key)}')" title="Remove">\u{00D7}</button>` : ''}
       <label class="toggle"><input type="checkbox" ${isEnabled ? 'checked' : ''} onchange="toggleTool('${esc(t.key)}', this.checked)"><span class="slider"></span></label>
     </div>
