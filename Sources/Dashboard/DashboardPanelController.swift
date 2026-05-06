@@ -126,6 +126,8 @@ class DashboardPanelController: NSObject {
             NSApp.applicationIconImage = icon
         }
 
+        installMainMenu()
+
         if !win.isVisible {
             win.center()
         }
@@ -183,6 +185,22 @@ private extension DashboardPanelController {
         if !showDock {
             NSApp.setActivationPolicy(.accessory)
         }
+    }
+
+    func installMainMenu() {
+        let mainMenu = NSMenu()
+
+        // App menu (first item is always the app menu on macOS)
+        let appMenuItem = NSMenuItem()
+        let appMenu = NSMenu()
+        appMenu.addItem(withTitle: "About ClawdOnMac", action: #selector(NSApplication.orderFrontStandardAboutPanel(_:)), keyEquivalent: "")
+        appMenu.addItem(.separator())
+        appMenu.addItem(withTitle: "Close Window", action: #selector(NSWindow.performClose(_:)), keyEquivalent: "w")
+        appMenu.addItem(withTitle: "Quit ClawdOnMac", action: #selector(NSApplication.terminate(_:)), keyEquivalent: "q")
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+
+        NSApp.mainMenu = mainMenu
     }
 
     static func loadAppIcon() -> NSImage? {
